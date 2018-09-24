@@ -162,11 +162,11 @@ def clean_strokes(pin):
             break
         else:
             i += 1
-    strokes = pin[i,:]
-    # strokes = np.vstack((strokes, pin[i+1]))
+    strokes = [pin[i,:]]
+    strokes = np.vstack((strokes, pin[i+1]))
     i += 1
     while i < rows-2:
-        test = pin[i,0]
+        test = pin[i]
         if pin[i+1,0] - pin[i, 0] >= 4 and pin[i+1, 3] - pin[i, 3] >= 3 \
                 and pin[i, 3] - strokes[-1, 3] > 2 and pin[i, 0] - strokes[-1, 0] > 3:
             strokes = np.vstack((strokes, pin[i]))
@@ -211,6 +211,40 @@ def clean_strokes(pin):
                 else:
                     strokes = np.vstack((strokes, pin[i]))
                     i += 1
+
+    rows, cols = strokes.shape
+    i = 1
+    while i <= rows - 4:
+        if strokes[i+1, 0] - strokes[i, 0] <= 3:
+            if strokes[i+1,1] > strokes[i-1,1] and strokes[i+2,1] > strokes[i,1] \
+                    and strokes[i, 2] == 1:
+                strokes = np.delete(strokes, [i, i+1], 0)
+                i -= 1
+            elif strokes[i+1,1] < strokes[i-1,1] and strokes[i+2,1] < strokes[i,1] \
+                    and strokes[i, 2] == 2:
+                strokes = np.delete(strokes, [i, i + 1], 0)
+                i -= 1
+            elif strokes[i+1,1] < strokes[i+3,1] and strokes[i+2,1] > strokes[i,1] \
+                    and strokes[i,2] == 2:
+                strokes = np.delete(strokes, [i+1, i + 2], 0)
+                i += 1
+            elif strokes[i+1,1] > strokes[i+3,1] and strokes[i+2,1] < strokes[i,1] \
+                    and strokes[i, 2] == 1:
+                strokes = np.delete(strokes, [i+1, i + 2], 0)
+                i += 1
+            elif strokes[i + 1, 1] > strokes[i-1, 1] and strokes[i, 1] > strokes[i-2, 1]\
+                    and strokes[i, 2] == 2:
+                strokes = np.delete(strokes, [i - 1, i], 0)
+                i += 1
+            elif strokes[i + 1, 1] < strokes[i-1, 1] and strokes[i, 1] < strokes[i-2, 1]\
+                    and strokes[i, 2] == 1:
+                strokes = np.delete(strokes, [i - 1, i], 0)
+                i += 1
+            else:
+                i += 1
+        else:
+            i += 1
+        rows, cols = strokes.shape
     return strokes #, count
 
 def count_uncleaned_strokes(pin):
@@ -254,7 +288,7 @@ def find_center(pin):
 
 
 ktype_in = 'D'
-wdyx = ts.get_k_data('000001', ktype=ktype_in,start='2017-01-01') #600690
+wdyx = ts.get_k_data('600690', ktype=ktype_in,start='2017-01-01') #600690
 mat = wdyx.as_matrix()
 
 
@@ -277,6 +311,7 @@ price_clean = data_clean_select(mat_clean)
 line = find_strokes(price_clean)
 # print(line)
 strokes = clean_strokes(line)
+
 # strokes = count_uncleaned_strokes(strokes)
 print(strokes)
 # pd.DataFrame(mat).to_csv("mat.csv")
