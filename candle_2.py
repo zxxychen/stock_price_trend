@@ -11,8 +11,9 @@ def pro_init():
     pro = ts.pro_api('d5741f23ebd206c762d2e593573499d5a479b8955ae9b5152c646ba2')
     return pro
 
-def stock_days_denoise(df):
+def stock_days_denoise_with_open_and_close(dfin):
     #
+    df = dfin.loc[:]
     rows, cols = df.shape
     df['high_b'] = 0
     df['low_b'] = 0
@@ -24,6 +25,18 @@ def stock_days_denoise(df):
         else:
             df.loc[i, 'high_b'] = df.loc[i, 'close']
             df.loc[i, 'low_b'] = df.loc[i, 'open']
+    return df
+
+def stock_days_denoise_with_high_and_low(dfin):
+    #
+    df = dfin.loc[:]
+    rows, cols = df.shape
+    df['high_b'] = 0
+    df['low_b'] = 0
+
+    for i in range(rows):
+        df.loc[i, 'high_b'] = df.loc[i, 'high']
+        df.loc[i, 'low_b'] = df.loc[i, 'low']
     return df
 
 def candle_plot(ax, df):
@@ -38,7 +51,8 @@ def candle_plot(ax, df):
         ax.add_patch(mp.Rectangle([index, row['low_b']], 0.6, row['high_b'] - row['low_b'], color=co, alpha=0.6))
     return ax
 
-def stock_contain_remove(df):
+def stock_contain_remove(dfin):
+    df = dfin.loc[:]
     rows, cols = df.shape
 
     # first: clean contain relationships
@@ -136,14 +150,19 @@ def get_daily_lists(pro, code, start_d, end_d):
     return df
 
 pro = pro_init()
-df = get_daily_lists(pro, '000001.SZ', '20180701', '20190718')
-# df.to_csv('df.csv')
-df = stock_days_denoise(df)
-# print(df)
-df = stock_contain_remove(df)
-line = line_plot(df)
-# print(line)
+df = get_daily_lists(pro, '000001.SZ', '20170102', '20190718')
+
+df_1 = stock_days_denoise_with_open_and_close(df)
+df_1 = stock_contain_remove(df_1)
+line = line_plot(df_1)
+
+df_2 = stock_days_denoise_with_high_and_low(df)
+df_2 = stock_contain_remove(df_2)
+line_2 = line_plot(df_2)
+
 fig, ax = plt.subplots(figsize=(5,3))
-ax = candle_plot(ax, df)
+ax = candle_plot(ax, df_1)
+
+plt.plot(line_2['id'] + 0.5, line_2['price'], c='y', alpha=0.8)
 plt.plot(line['id'] + 0.5, line['price'])
 plt.show()
