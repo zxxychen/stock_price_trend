@@ -31,19 +31,20 @@ class K_line():
         df.index = range(len(df))
         self.k_lines = df
 
-    def print_k_lines(self, ndays):
+    def print_k_lines(self, ndays=None):
         # print some parameters of the instance
         print('code is ', self.code)
         print('start data ', self.start_time)
         print('end data ', self.end_time)
-
+        if ndays==None:
+            ndays = 5
         print(self.k_lines.head(ndays))
         print(self.k_lines.tail(ndays))
 
     def stock_days_denoise_with_open_and_close(self):
         #
         df = self.k_lines.loc[:]
-        rows, cols = df.shape
+        rows, _ = df.shape(0)
         df['high_b'] = 0
         df['low_b'] = 0
 
@@ -59,7 +60,7 @@ class K_line():
     def stock_days_denoise_with_high_and_low(self):
         #
         df = self.k_lines.loc[:]
-        rows, cols = df.shape
+        rows, _ = df.shape
         df['high_b'] = 0
         df['low_b'] = 0
 
@@ -142,7 +143,7 @@ class K_line():
 
     def _stock_contain_remove(self):
         df = self.k_lines.loc[:]
-        rows, cols = df.shape
+        rows, _ = df.shape
 
         # first: clean contain relationships
         for i in range(rows):
@@ -185,7 +186,7 @@ class K_line():
         # deal with first line
         line = line.append(pd.DataFrame({'id':[0], 'price':[df.loc[0, 'open']], 'type':[1]}))
     
-        rows, cols = self.k_lines.shape
+        rows, _ = self.k_lines.shape
     
         for i in range(rows):
             if i == 0 or i == rows-1:
@@ -228,21 +229,32 @@ class K_line():
             line.index = range(len(line))
     
         # line.to_csv('line2.csv')
+        line.drop(df.index[0], inplace=True)
     
         return line
 
 
     def strategy_neck_line_print(self):
-        df = self.k_lines
-        fig = self.fig
         ax1 = self.ax1
-        main_center_high = 0
-        main_center_low = 0
 
         df_1 = self._stock_contain_remove()
         line = self._line_plot(df_1)
         print(line)
+        if line.iloc[0]['type'] == 1:
+            main_center_high = line.iloc[0]['price']
+            main_center_low = line.iloc[1]['price']
+        elif line.iloc[0]['type'] == 2:
+            main_center_high = line.iloc[1]['price']
+            main_center_low = line.iloc[0]['price']
+        judge_state = line.iloc[1]['type']
+        second_center_high = 0
+        second_center_low = 0
+        print(main_center_high, main_center_low)
 
+        center_list = pd.DataFrame(columns=['start_date', 'end_date', 'center_high', 'center_low'])
+        for index, row in line.iterrows():
+            pass
+            
 
     def strategy_average_system_test(self):
         # 均线策略 测试
@@ -331,11 +343,11 @@ if __name__ == "__main__":
     # test.print_k_lines(10)
     test.stock_days_denoise_with_high_and_low()
     test.k_lines_mean()
-    test.print_k_lines(10)
-    # test.candle_plot()
+    # test.print_k_lines()
+    test.candle_plot()
     # test.k_lines_mean_plot()
     # test.strategy_average_system_test()
     # test.k_lines_plot_all()
     test.strategy_neck_line_print()
-    test.print_k_lines(10)
+    # test.print_k_lines()
 
