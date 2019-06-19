@@ -15,20 +15,24 @@ class K_line():
         # self.period = period
         self.start_time = start_time
         self.end_time = end_time
-        self.pro = 0
+        # self.pro = 0
         self.k_lines = 0
         self.fig = 0
         self.ax1 = 0
         self.ax2 = 0
 
-    def pro_init(self):
-        self.pro = ts.pro_api('d5741f23ebd206c762d2e593573499d5a479b8955ae9b5152c646ba2')
+    # def pro_init(self):
+        # self.pro = ts.pro_api('d5741f23ebd206c762d2e593573499d5a479b8955ae9b5152c646ba2')
 
     def get_daily_lists(self):
         # 获取日线数据
-        df = self.pro.daily(ts_code=self.code, start_date=self.start_time, end_date=self.end_time)
+        # df = self.pro.daily(ts_code=self.code, start_date=self.start_time, end_date=self.end_time)
+        ts.set_token('d5741f23ebd206c762d2e593573499d5a479b8955ae9b5152c646ba2')
+        df = ts.pro_bar(ts_code=self.code, adj='qfq', start_date=self.start_time, end_date=self.end_time,
+                        ma=[5, 20, 50])
         df = df.sort_index(ascending=False)
         df.index = range(len(df))
+        df.to_csv('temp.csv')
         self.k_lines = df
 
     def print_k_lines(self, ndays=None):
@@ -101,7 +105,7 @@ class K_line():
         # plot vol
         # df.to_csv('df.csv')
         # fig, ax = plt.subplots(figsize=(5,3))
-        fig = plt.figure(figsize=(16, 8))
+        fig = plt.figure(figsize=(5, 3))
         # fig = plt.figure(constrained_layout=True)
         gs = GridSpec(3, 3)
         ax1 = fig.add_subplot(gs[0:-1, :])
@@ -113,9 +117,9 @@ class K_line():
             # print(row['high_b']- row['low_b'])
             ax1.add_patch(mp.Rectangle([index, row['low_b']], 0.6, row['high_b'] - row['low_b'], color=co, alpha=0.6))
         print(self.k_lines.shape)
-        print(self.k_lines['low_b'].min())
+        # print(self.k_lines['low_b'].min())
         (days, _) = self.k_lines.shape
-        print(days)
+        # print(days)
         ax1.set_xlim(-1, days + 1)
         ax1.set_ylim(self.k_lines['low_b'].min(), self.k_lines['high_b'].max())
         ax1.set_xlabel('days Kline')
@@ -230,30 +234,61 @@ class K_line():
     
         # line.to_csv('line2.csv')
         line.drop(df.index[0], inplace=True)
-    
         return line
-
 
     def strategy_neck_line_print(self):
         ax1 = self.ax1
 
         df_1 = self._stock_contain_remove()
         line = self._line_plot(df_1)
+        ax1.plot(line['id'], line['price'], c='tab:blue', alpha=0.6)
+
         print(line)
         if line.iloc[0]['type'] == 1:
             main_center_high = line.iloc[0]['price']
+            start_date = line.iloc[0]['id']
             main_center_low = line.iloc[1]['price']
+            end_date = line.iloc[1]['id']
+            start_line = 2
         elif line.iloc[0]['type'] == 2:
             main_center_high = line.iloc[1]['price']
-            main_center_low = line.iloc[0]['price']
-        judge_state = line.iloc[1]['type']
-        second_center_high = 0
-        second_center_low = 0
+            start_date = line.iloc[1]['id']
+            main_center_low = line.iloc[2]['price']
+            end_date = line.iloc[2]['id']
+            start_line = 3
         print(main_center_high, main_center_low)
 
         center_list = pd.DataFrame(columns=['start_date', 'end_date', 'center_high', 'center_low'])
-        for index, row in line.iterrows():
-            pass
+        for _, row in line.iloc[:].iterrows():
+            compare_signal = 0
+            if row['type'] == 1:
+                second_center_high = row['price']
+                start_date_t = row['id']
+            else:
+                second_center_low = row['price']
+                compare_signal = 1
+
+            if compare_signal == 1:
+                #判断下一个线段和上一个线段的关系
+                compare_signal = 0
+                if second_center_low > main_center_high or second_center_high < main_center_low:
+                    end_date = row['id']
+                    ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
+                                               main_center_high - main_center_low,
+                                               color='tab:gray', alpha=0.3))
+                    center_list = center_list.append({'start_date': start_date - 1, 'end_date': end_date,
+                                                      'center_high': main_center_high, 'center_low': main_center_low},
+                                                     ignore_index=True)
+                    main_center_high = second_center_high
+                    main_center_low = second_center_low
+                    start_date = start_date_t
+
+                else:
+                    end_date = row['id']
+        ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
+                                   main_center_high - main_center_low,
+                                   color='tab:gray', alpha=0.3))
+        # print(center_list)
             
 
     def strategy_average_system_test(self):
@@ -337,17 +372,18 @@ class K_line():
 
 
 if __name__ == "__main__":
-    test = K_line('000001.SZ', '20170102', '20190718')
-    test.pro_init()
+    test = K_line('600048.SH', '20170102', '20190718')
+
+    # test.pro_init()
     test.get_daily_lists()
-    # test.print_k_lines(10)
+    test.print_k_lines(10)
     test.stock_days_denoise_with_high_and_low()
     test.k_lines_mean()
     # test.print_k_lines()
     test.candle_plot()
     # test.k_lines_mean_plot()
     # test.strategy_average_system_test()
-    # test.k_lines_plot_all()
     test.strategy_neck_line_print()
+    test.k_lines_plot_all()
     # test.print_k_lines()
 
