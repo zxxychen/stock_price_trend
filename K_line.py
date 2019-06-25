@@ -235,15 +235,39 @@ class K_line():
         # line.to_csv('line2.csv')
         line.drop(df.index[0], inplace=True)
         return line
+    
+    def _line_filter(self, line):
+        # filt line, remove some noise
+        line_filt = pd.DataFrame(columns=('id', 'price', 'type'))
+        line_filt = line_filt.append(line.iloc[0])
+        pre_state = line.iloc[0]['type']
+        for i in range(1, len(line)-2):
+            pre_line_len = line.iloc[i]['price'] - line.iloc[i-1]['price']
+            cur_line_len = line.iloc[i+1]['price'] - line.iloc[i]['price']
+            nex_line_len = line.iloc[i+2]['price'] - line.iloc[i+1]['price']
+            if line.iloc[i+1]['id'] - line.iloc[i]['id'] >=5:
+                line_filt = line_filt.append(line.iloc[i])
+            else:
+                if abs(cur_line_len / pre_line_len) >0.8 or abs(cur_line_len / pre_line_len) < 1.2 or abs(cur_line_len / nex_line_len) >0.8 or abs(cur_line_len / nex_line_len) < 1.2:
+                    line_filt = line_filt.append(line.iloc[i])
+
+            if pre_state == 1:
+                pass
+            elif pre_state ==2:
+                pass
+        return line_filt
 
     def strategy_neck_line_print(self):
         ax1 = self.ax1
 
         df_1 = self._stock_contain_remove()
         line = self._line_plot(df_1)
+        line_filt = self._line_filter(line)
+        print(line_filt)
+
         ax1.plot(line['id'], line['price'], c='tab:blue', alpha=0.6)
 
-        print(line)
+        # print(line)
         if line.iloc[0]['type'] == 1:
             main_center_high = line.iloc[0]['price']
             start_date = line.iloc[0]['id']
@@ -256,7 +280,7 @@ class K_line():
             main_center_low = line.iloc[2]['price']
             end_date = line.iloc[2]['id']
             start_line = 3
-        print(main_center_high, main_center_low)
+        # print(main_center_high, main_center_low)
 
         center_list = pd.DataFrame(columns=['start_date', 'end_date', 'center_high', 'center_low'])
         for _, row in line.iloc[:].iterrows():
@@ -357,9 +381,9 @@ class K_line():
         ax = self.ax1
         for index, row in trade_info.iterrows():
             cap_increase += row['sold'] - row['buy']
-            ax.axvspan(row['buy_date'], row['sold_date'], facecolor='tab:gray', alpha=0.3)
+            # ax.axvspan(row['buy_date'], row['sold_date'], facecolor='tab:gray', alpha=0.3)
         cap_total = trade_info.loc[0, 'buy'] + cap_increase
-        print('initial  price = ', trade_info.loc[0, 'buy'], 'final cap = ', cap_total, 'increase = ', cap_increase)
+        # print('initial  price = ', trade_info.loc[0, 'buy'], 'final cap = ', cap_total, 'increase = ', cap_increase)
 
         start_price = df.iloc[29]['close']
         end_price = df.iloc[-1]['close']
@@ -367,7 +391,7 @@ class K_line():
         print('initial  price = ', df.loc[29, 'close'], 'final cap = ', df.iloc[-1]['close'], 'increase = ',
               df.iloc[-1]['close'] - df.loc[29, 'close'])
 
-        ax.set(title=[self.code, 'initial  price = {:.2f}', trade_info.loc[0, 'buy'], 'final cap = ', cap_total,
+        ax.set(title=[self.code, 'initial  price = ', trade_info.loc[0, 'buy'], 'final cap = ', cap_total,
                       'increase = ', cap_increase])
 
 
@@ -382,7 +406,7 @@ if __name__ == "__main__":
     # test.print_k_lines()
     test.candle_plot()
     # test.k_lines_mean_plot()
-    # test.strategy_average_system_test()
+    test.strategy_average_system_test()
     test.strategy_neck_line_print()
     test.k_lines_plot_all()
     # test.print_k_lines()
