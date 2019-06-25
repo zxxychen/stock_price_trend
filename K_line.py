@@ -48,7 +48,7 @@ class K_line():
     def stock_days_denoise_with_open_and_close(self):
         #
         df = self.k_lines.loc[:]
-        rows, _ = df.shape(0)
+        rows, _ = df.shape
         df['high_b'] = 0
         df['low_b'] = 0
 
@@ -115,7 +115,8 @@ class K_line():
             else:
                 co = 'g'
             # print(row['high_b']- row['low_b'])
-            ax1.add_patch(mp.Rectangle([index, row['low_b']], 0.6, row['high_b'] - row['low_b'], color=co, alpha=0.6))
+            ax1.add_patch(mp.Rectangle([index, row['low_b']], 0.8, row['high_b'] - row['low_b'], color=co, alpha=0.6))
+            ax1.add_patch(mp.Rectangle([index+0.35, row['low']], 0.1, row['high'] - row['low'], color=co, alpha=0.4))
         print(self.k_lines.shape)
         # print(self.k_lines['low_b'].min())
         (days, _) = self.k_lines.shape
@@ -247,8 +248,8 @@ class K_line():
             nex_line_len = line.iloc[i+2]['price'] - line.iloc[i+1]['price']
             if line.iloc[i+1]['id'] - line.iloc[i]['id'] >=5:
                 line_filt = line_filt.append(line.iloc[i])
-            else:
-                if abs(cur_line_len / pre_line_len) >0.8 or abs(cur_line_len / pre_line_len) < 1.2 or abs(cur_line_len / nex_line_len) >0.8 or abs(cur_line_len / nex_line_len) < 1.2:
+            elif abs(cur_line_len / pre_line_len) > 0.8 or abs(cur_line_len / pre_line_len) < 1.2 or \
+                        abs(cur_line_len / nex_line_len) > 0.8 or abs(cur_line_len / nex_line_len) < 1.2:
                     line_filt = line_filt.append(line.iloc[i])
 
             if pre_state == 1:
@@ -262,10 +263,11 @@ class K_line():
 
         df_1 = self._stock_contain_remove()
         line = self._line_plot(df_1)
-        line_filt = self._line_filter(line)
-        print(line_filt)
-
         ax1.plot(line['id'], line['price'], c='tab:blue', alpha=0.6)
+        line = self._line_filter(line)
+        # print(line_filt)
+
+        ax1.plot(line['id'], line['price'], c='tab:green', alpha=0.6)
 
         # print(line)
         if line.iloc[0]['type'] == 1:
@@ -283,36 +285,52 @@ class K_line():
         # print(main_center_high, main_center_low)
 
         center_list = pd.DataFrame(columns=['start_date', 'end_date', 'center_high', 'center_low'])
+        center_list = center_list.append(pd.Series({'start_date': start_date, 'end_date': end_date,
+                                                    'center_high': main_center_high, 'center_low': main_center_low}),
+                                         ignore_index=True)
         for _, row in line.iloc[:].iterrows():
-            compare_signal = 0
+            #判断下一个线段和上一个center的关系
             if row['type'] == 1:
                 second_center_high = row['price']
-                start_date_t = row['id']
-            else:
-                second_center_low = row['price']
-                compare_signal = 1
-
-            if compare_signal == 1:
-                #判断下一个线段和上一个线段的关系
-                compare_signal = 0
-                if second_center_low > main_center_high or second_center_high < main_center_low:
-                    end_date = row['id']
+                if second_center_high < main_center_low:
+                    end_date = row['id'] - 1
                     ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
                                                main_center_high - main_center_low,
                                                color='tab:gray', alpha=0.3))
-                    center_list = center_list.append({'start_date': start_date - 1, 'end_date': end_date,
-                                                      'center_high': main_center_high, 'center_low': main_center_low},
+                    start_date = previous_id
+                    main_center_high = row['price']
+                    center_list = center_list.append(pd.Series({'start_date': start_date, 'end_date': end_date,
+                                                                'center_high': main_center_high,
+                                                                'center_low': main_center_low}),
                                                      ignore_index=True)
-                    main_center_high = second_center_high
-                    main_center_low = second_center_low
-                    start_date = start_date_t
-
+                    main_center_low = previous_low
                 else:
-                    end_date = row['id']
+                    previous_high = row['price']
+                    previous_id = row['id']
+            else:
+                second_center_low = row['price']
+                # compare_signal = 1
+                if second_center_low > main_center_high:
+                    end_date = row['id'] - 1
+                    ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
+                                               main_center_high - main_center_low,
+                                               color='tab:gray', alpha=0.3))
+                    start_date = previous_id
+                    main_center_low = row['price']
+                    main_center_high = previous_high
+                    center_list = center_list.append(pd.Series({'start_date': start_date, 'end_date': end_date,
+                                                                'center_high': main_center_high,
+                                                                'center_low': main_center_low}),
+                                                     ignore_index=True)
+                else:
+                    previous_low = row['price']
+                    previous_id = row['id']
+
+
         ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
                                    main_center_high - main_center_low,
                                    color='tab:gray', alpha=0.3))
-        # print(center_list)
+        print(center_list)
             
 
     def strategy_average_system_test(self):
@@ -369,7 +387,7 @@ class K_line():
                 previous_buy_state = pre_buy_state
 
         print('total trade count is', trade_count)
-        print(trade_info)
+        # print(trade_info)
         if np.isnan(trade_info.loc[trade_info.shape[0]-1, 'buy']):
             trade_info = trade_info.drop(trade_info.shape[0])
         else:
@@ -401,7 +419,7 @@ if __name__ == "__main__":
     # test.pro_init()
     test.get_daily_lists()
     test.print_k_lines(10)
-    test.stock_days_denoise_with_high_and_low()
+    test.stock_days_denoise_with_open_and_close()
     test.k_lines_mean()
     # test.print_k_lines()
     test.candle_plot()
