@@ -122,7 +122,7 @@ class K_line():
         (days, _) = self.k_lines.shape
         # print(days)
         ax1.set_xlim(-1, days + 1)
-        ax1.set_ylim(self.k_lines['low_b'].min(), self.k_lines['high_b'].max())
+        ax1.set_ylim(self.k_lines['low'].min() - 1, self.k_lines['high'].max() + 1)
         ax1.set_xlabel('days Kline')
 
         # ax2 = plt.subplot(2,1,2)
@@ -237,25 +237,55 @@ class K_line():
         line.drop(df.index[0], inplace=True)
         return line
     
+
     def _line_filter(self, line):
-        # filt line, remove some noise
+        # filt line, remove some noise 消除趋势中小的震荡
         line_filt = pd.DataFrame(columns=('id', 'price', 'type'))
         line_filt = line_filt.append(line.iloc[0])
-        pre_state = line.iloc[0]['type']
-        for i in range(1, len(line)-2):
-            pre_line_len = line.iloc[i]['price'] - line.iloc[i-1]['price']
-            cur_line_len = line.iloc[i+1]['price'] - line.iloc[i]['price']
-            nex_line_len = line.iloc[i+2]['price'] - line.iloc[i+1]['price']
-            if line.iloc[i+1]['id'] - line.iloc[i]['id'] >=5:
-                line_filt = line_filt.append(line.iloc[i])
-            elif abs(cur_line_len / pre_line_len) > 0.8 or abs(cur_line_len / pre_line_len) < 1.2 or \
-                        abs(cur_line_len / nex_line_len) > 0.8 or abs(cur_line_len / nex_line_len) < 1.2:
-                    line_filt = line_filt.append(line.iloc[i])
+        pre_type = line.iloc[0]['type']
+        pre_price = line.iloc[0]['price']
+        pre_id = line.iloc[0]['id']
 
-            if pre_state == 1:
-                pass
-            elif pre_state ==2:
-                pass
+        i = 1
+        while i < len(line) - 2:
+            cur_price = line.iloc[i]['price']
+            cur_id = line.iloc[i]['id']
+            cur_type = line.iloc[i]['type']
+
+            nex_price = line.iloc[i + 1]['price']
+            nex_id = line.iloc[i + 1]['id']
+            nex_type = line.iloc[i + 1]['type']
+
+            nex2_price = line.iloc[i + 2]['price']
+            nex2_id = line.iloc[i + 2]['id']
+            nex2_type = line.iloc[i + 2]['type']
+
+            if pre_type == 1:
+                # top
+                if nex2_price < cur_price and nex_price < pre_price\
+                        and abs((nex_price - cur_price) / (pre_price - nex2_price)) < 0.3:
+                    i += 2
+                else:
+                    line_filt = line_filt.append(line.iloc[i])
+                    i += 1
+                    pre_price = cur_price
+                    pre_type = cur_type
+                    pre_id = cur_id
+                continue
+
+            elif pre_type == 2:
+                #bot
+                if nex2_price > cur_price and nex_price > pre_price\
+                        and abs((nex_price - cur_price) / (pre_price - nex2_price)) < 0.3:
+                    i += 2
+                else:
+                    line_filt = line_filt.append(line.iloc[i])
+                    i += 1
+                    pre_price = cur_price
+                    pre_type = cur_type
+                    pre_id = cur_id
+                continue
+
         return line_filt
 
     def strategy_neck_line_print(self):
@@ -267,7 +297,7 @@ class K_line():
         line = self._line_filter(line)
         # print(line_filt)
 
-        ax1.plot(line['id'], line['price'], c='tab:green', alpha=0.6)
+        ax1.plot(line['id'], line['price'], c='tab:red', alpha=0.6)
 
         # print(line)
         if line.iloc[0]['type'] == 1:
@@ -275,25 +305,28 @@ class K_line():
             start_date = line.iloc[0]['id']
             main_center_low = line.iloc[1]['price']
             end_date = line.iloc[1]['id']
-            start_line = 2
+
         elif line.iloc[0]['type'] == 2:
             main_center_high = line.iloc[1]['price']
             start_date = line.iloc[1]['id']
             main_center_low = line.iloc[2]['price']
             end_date = line.iloc[2]['id']
-            start_line = 3
+
         # print(main_center_high, main_center_low)
 
         center_list = pd.DataFrame(columns=['start_date', 'end_date', 'center_high', 'center_low'])
         center_list = center_list.append(pd.Series({'start_date': start_date, 'end_date': end_date,
                                                     'center_high': main_center_high, 'center_low': main_center_low}),
                                          ignore_index=True)
+        previous_id = line.iloc[2]['id']
+        previous_high = main_center_high
+        previous_low = main_center_low
         for _, row in line.iloc[:].iterrows():
             #判断下一个线段和上一个center的关系
             if row['type'] == 1:
                 second_center_high = row['price']
                 if second_center_high < main_center_low:
-                    end_date = row['id'] - 1
+                    end_date = previous_id - 1
                     ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
                                                main_center_high - main_center_low,
                                                color='tab:gray', alpha=0.3))
@@ -326,7 +359,7 @@ class K_line():
                     previous_low = row['price']
                     previous_id = row['id']
 
-
+        end_date = line.iloc[-1]['id']
         ax1.add_patch(mp.Rectangle([start_date, main_center_low], end_date - start_date,
                                    main_center_high - main_center_low,
                                    color='tab:gray', alpha=0.3))
