@@ -1,13 +1,16 @@
 from pyecharts.charts import Bar, Grid, Kline, Line
 from pyecharts import options as opts
 
-def Candle_render_output(x_date, y_data) -> Grid:
+def Candle_render_output(x_date, y_data, vol_data) -> Grid:
+    # ydata type : open close low high
+    # vol_data is for bar
+    print('Candle_render_output')
     kline = (
         Kline()
         .add_xaxis(xaxis_data=x_date)
         .add_yaxis(
             series_name="Dow-Jones index",
-            y_axis=data,
+            y_axis=y_data,
             itemstyle_opts=opts.ItemStyleOpts(color="#ec0000", color0="#00da3c"),
         )
         .set_global_opts(
@@ -78,10 +81,11 @@ def Candle_render_output(x_date, y_data) -> Grid:
         .add_xaxis(xaxis_data=x_date)
         .add_yaxis(
             series_name="Volume",
-            yaxis_data=[
-                [i, data[i][3], 1 if data[i][0] > data[i][1] else -1]
-                for i in range(len(data))
-            ],
+            # yaxis_data=[
+            #     [i, y_data[i][3], 1 if y_data[i][0] > y_data[i][1] else -1]
+            #     for i in range(len(y_data))
+            # ],
+            yaxis_data=vol_data,
             xaxis_index=1,
             yaxis_index=1,
             label_opts=opts.LabelOpts(is_show=False),
@@ -113,12 +117,13 @@ def Candle_render_output(x_date, y_data) -> Grid:
         )
     )
 
-
+    lines = Kline_ma_line(x_date, y_data)
+    kline = kline.overlap(lines)
     # Grid Overlap + Bar
     grid_chart = Grid()
     grid_chart.add(
-        Kline,
-        grid_opts=opts.GridOpts(pos_left="10%", pos_right="8%", height="50%"),
+        kline,
+        grid_opts=opts.GridOpts(pos_left="10%", pos_right="8%", height="50%")
     )
     grid_chart.add(
         bar,
@@ -140,13 +145,14 @@ def calculate_ma(day_count: int, data):
         result.append(abs(float("%.3f" % (sum_total / day_count))))
     return result
 
-def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Grid:
+# def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Line:
+def Kline_ma_line(x_date, data) -> Line:
     line = (
         Line()
         .add_xaxis(xaxis_data=x_date)
         .add_yaxis(
             series_name="MA5",
-            y_axis=calculate_ma(day_count=5, d=data),
+            y_axis=calculate_ma(day_count=5, data=data),
             is_smooth=True,
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
@@ -154,7 +160,7 @@ def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Grid:
         )
         .add_yaxis(
             series_name="MA10",
-            y_axis=calculate_ma(day_count=10, d=data),
+            y_axis=calculate_ma(day_count=10, data=data),
             is_smooth=True,
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
@@ -162,7 +168,7 @@ def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Grid:
         )
         .add_yaxis(
             series_name="MA30",
-            y_axis=calculate_ma(day_count=30, d=data),
+            y_axis=calculate_ma(day_count=30, data=data),
             is_smooth=True,
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
@@ -170,7 +176,7 @@ def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Grid:
         )
         .add_yaxis(
             series_name="MA60",
-            y_axis=calculate_ma(day_count=60, d=data),
+            y_axis=calculate_ma(day_count=60, data=data),
             is_smooth=True,
             is_hover_animation=False,
             linestyle_opts=opts.LineStyleOpts(width=3, opacity=0.5),
@@ -179,10 +185,11 @@ def Kline_ma_line(K_line_grid:Grid, x_date, data) -> Grid:
         .set_global_opts(xaxis_opts=opts.AxisOpts(type_="category"))
     )
     # Kline And Line
-    overlap_kline_line = K_line_grid.overlap(line)
-    return overlap_kline_line
+    # overlap_kline_line = K_line_grid.overlap(line)
+    return line
 
 def Kline_save_to_render(grid:Grid):
-    grid.render()
+    print(' Kline_save_to_render')
+    grid.render('F:\\0-python-files\\stock_price_trend-master\\out.html')
     return
 
