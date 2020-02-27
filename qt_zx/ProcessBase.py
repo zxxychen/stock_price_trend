@@ -47,6 +47,7 @@ class Qt_sell_base(ABC):
         """
         根据交易发生的时间索引，依次进行交易订单生成，交易时间序列特征生成，
         :param day_ind: 交易发生的时间索引，即对应self.kl_pd.key
+        **kwargs: price=p  交易金额
         """
         self.today_ind = day_ind
 
