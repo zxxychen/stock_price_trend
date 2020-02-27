@@ -447,7 +447,7 @@ class K_line():
 
 
 if __name__ == "__main__":
-    test = K_line('600048.SH', '20170102', '20190718')
+    test = K_line('000001.SZ', '20170102', '20190718')
 
     # test.pro_init()
     test.get_daily_lists()
