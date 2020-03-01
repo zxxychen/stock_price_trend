@@ -39,7 +39,7 @@ class K_line():
         df = df.sort_index(ascending=False)
         df.index = range(len(df))
         df['key'] = np.arange(len(df))
-        df.to_csv('./gen/temp.csv', columns=df.columns, index=True)
+        df.to_csv('./gen/'+self.code+'.csv', columns=df.columns, index=True)
         self.k_lines = df
 
     def load_temp_csv(self):
@@ -71,7 +71,26 @@ class K_line():
             ax1.plot(np.arange(29, days).astype(float)+0.5, self.k_lines.loc[29:, 'ma60'], color='c', alpha=0.8)
         self.ax1 = ax1
 
-    def candle_plot(self):
+    def k_lines_BOLL_plot(self, N):
+        # add moving average line to candle image
+        (days, _) = self.k_lines.shape
+        ax1 = self.ax1
+        # 先画出N日均线
+        kl_pd = self.k_lines
+        kl_pd.loc[:, 'N1mean'] = self.k_lines['close'].rolling(N).mean()
+        ax1.plot(np.arange(0, days).astype(float)+0.5, kl_pd.N1mean, alpha=0.8, color='K')
+        # 求标准差
+        kl_pd.loc[:, 'std1'] = kl_pd.close - kl_pd.N1mean
+        kl_pd.loc[:, 'std1'] = kl_pd['std1'].rolling(N).std()
+        kl_pd.loc[:, 'up'] = kl_pd.N1mean + 2 * kl_pd.loc[:,'std1']
+        kl_pd.loc[:, 'dn'] = kl_pd.N1mean - 2 * kl_pd.loc[:, 'std1']
+        ax1.fill_between(kl_pd.key.astype(float) + 0.5,\
+             kl_pd.dn.shift(10), kl_pd.up.shift(1), \
+                 color='red', alpha=0.2)
+        
+        self.ax1 = ax1
+
+    def candle_plot(self, ax2_type='val'):
         fig = self.fig
         ax1 = self.ax1
         ax2 = self.ax2
@@ -112,13 +131,14 @@ class K_line():
     
 
 if __name__ == "__main__":
-    test = K_line('000001.SZ', '20170102', '20190718')
-
-    # test.pro_init()
-    test.print_k_lines(10)
-
+    test = K_line('000001.SZ', '20180102', '20201231',get_klines=True)
+    test.k_lines_mean_plot([20,5, 60])
     test.candle_plot()
-    test.k_lines_mean_plot()
-    test.plot_all()
+    # test.plot_all()
+
+    test2 = K_line('600105.SH', '20180102', '20201231',get_klines=True)
+    test2.k_lines_mean_plot([20,5, 60])
+    test2.candle_plot()
+    test2.plot_all()
 
 

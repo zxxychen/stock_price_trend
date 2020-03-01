@@ -6,6 +6,9 @@ HOLD = np.NaN
 global SELL 
 SELL = 0
 
+## safety:
+SAFE0 = 0 # 保守一些的
+SAFE1 = 1 # 激进一些的
 
 # for Buy_break_yao
 BOT = 0 #bottom

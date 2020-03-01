@@ -59,39 +59,50 @@ class Qt_sell_base(ABC):
 class Qt_order():
     def __init__(self):
         self.order_deal = False
+        self.discribe = 'sell'
            
     def fit_buy_order(self, day_ind, factors,  **kwargs):        
         #factors: Qt_buy_base
-        self.day_ind = day_ind
-
+        self.day_ind = day_ind   
         self.price = factors.kl_pd.iloc[day_ind].open
+        if 'discribe' in kwargs:
+            self.discribe = kwargs['discribe']
+
         # signal = 1 代表买入
         self.signal = BUY
         self.order_deal = True
-        if 'price' in kwargs:
-            buy_price = kwargs['price']
-            self.price = buy_price
         if factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].close and \
             factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].high and \
             factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].low:
             if factors.kl_pd.iloc[day_ind].pct_chg > 5: #涨停 无法买入
                 self.signal = HOLD
+        if 'price' in kwargs: ## TBD 如果有目标价格，如果目标价格不在当天波动范围内，如何处理？
+            buy_price = kwargs['price']
+            self.price = buy_price
+            if self.price < factors.kl_pd.iloc[day_ind].low: #目的价格小于当天最低价, 用当天均价作为买入价格
+                self.price = (factors.kl_pd.iloc[day_ind].open + factors.kl_pd.iloc[day_ind].close) / 2
 
 
     def fit_sell_order(self, day_ind, factors, **kwargs):
         #factors: Qt_buy_base
         self.day_ind = day_ind
         self.price = factors.kl_pd.iloc[day_ind].close
+        if 'discribe' in kwargs:
+            self.discribe = kwargs['discribe']
+
         # signal = 0 代表卖出
         self.signal = SELL
         self.order_deal = True
-        if 'sell_price' in kwargs:
-            self.price = kwargs['sell_price']
         if factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].close and \
             factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].high and \
             factors.kl_pd.iloc[day_ind].open == factors.kl_pd.iloc[day_ind].low:
             if factors.kl_pd.iloc[day_ind].pct_chg < 5: #跌停 无法卖出
                 self.signal = HOLD
+        if 'sell_price' in kwargs:  ## TBD 如果有目标价格，如果目标价格不在当天波动范围内，如何处理？
+            self.price = kwargs['sell_price']
+            if self.price > factors.kl_pd.iloc[day_ind].high: #目的价格高于当天最高价, 用均价作为卖出价格
+                self.price = (factors.kl_pd.iloc[day_ind].open + factors.kl_pd.iloc[day_ind].close) / 2
+                # self.price = factors.kl_pd.iloc[day_ind].low #极端情况，用最低价作为卖出价格
 
     def __str__(self):
         return 'the day {}  signal= {} at price {}'.format(self.day_ind, 'buy' if self.signal else 'sell', self.price)

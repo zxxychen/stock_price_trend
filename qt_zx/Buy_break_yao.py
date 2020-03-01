@@ -45,7 +45,7 @@ class Buy_yao(Qt_buy_base):
         self.line_simple_ref = 2 #化简line_simple时的参考id，当前化简到某一天了。从第三天开始
 
     def _init_self(self, **kwargs):
-        self.xd =  kwargs['xd']
+        self.xd =  kwargs['xd1']
         if 'pre_time' in kwargs:
             self.pre_time = kwargs['pre_time']
         else:
@@ -143,48 +143,6 @@ class Buy_yao(Qt_buy_base):
                         line_base_start = self.line_base_ref
  
                     else:
-                        # #思路一
-                        # #否则接着再往下看一段, 判断本段和下一段的高度比值
-                        # if self.line_base.index[-1] - line_base_start > 1:
-                        #     diff_pre = self.line_simple.iloc[-1].price - self.line_base.iloc[line_base_start+1].price
-                        #     diff_now = self.line_base.iloc[line_base_start+2].price - self.line_base.iloc[line_base_start+1].price
-                        #     if abs(diff_pre / diff_now) >= 0.7:
-                        #         self.line_simple = self.line_simple.append(self.line_base.iloc[line_base_start+1])
-                        #         self.line_base_ref += 1
-                        #         line_base_start += 1
-                        #     else:
-                        #         self.line_simple.iloc[-1].id = self.line_base.iloc[line_base_start+2].id
-                        #         self.line_simple.iloc[-1].price = self.line_base.iloc[line_base_start+2].price
-                        #         self.line_base_ref += 2
-                        #         line_base_start += 2
-                        # else:
-                        #     break
-
-                        # #思路二
-                        # #否则接着再往下看一段, 判断本段和下一段的峰值
-                        # if self.line_base.index[-1] - line_base_start > 1:
-                        #     if self.line_simple.iloc[-1].vertex == BOT:
-                        #         if self.line_base.iloc[line_base_start+2].price < self.line_simple.iloc[-1].price:
-                        #             self.line_simple.iloc[-1].id = self.line_base.iloc[line_base_start+2].id
-                        #             self.line_simple.iloc[-1].price = self.line_base.iloc[line_base_start+2].price
-                        #             self.line_base_ref += 2
-                        #             line_base_start += 2
-                        #         else:
-                        #             break
-
-                        #     if self.line_simple.iloc[-1].vertex == TOP:
-                        #         if self.line_base.iloc[line_base_start+2].price > self.line_simple.iloc[-1].price:
-                        #             self.line_simple.iloc[-1].id = self.line_base.iloc[line_base_start+2].id
-                        #             self.line_simple.iloc[-1].price = self.line_base.iloc[line_base_start+2].price
-                        #             self.line_base_ref += 2
-                        #             line_base_start += 2
-                        #         else:
-                        #             self.line_base_ref += 2
-                        #             line_base_start += 2
-                                
-                        # else:
-                        #     break
-
                         # #思路三
                         # #接着再往下看一段, 寻找突破峰值的下一个点
                         temp_base_id = line_base_start+2
@@ -451,9 +409,11 @@ class Buy_yao(Qt_buy_base):
                 
 
     def fit_day(self, today):
+        res = list()
         self._line_for_basic(today)
         self._line_simplify(today)
         self.current_struct_analysis_daily2(today, self.line_simple)
+        return res
         
 
 
@@ -468,13 +428,13 @@ class Sell_mean(Qt_sell_base):
 
 
     def _init_self(self, **kwargs):
-        self.xd =  kwargs['xd']
+        self.xd =  kwargs['xd1']
     
     def fit_day(self, today):
+        res = list()
         kl_pd = self.kl_pd
         day_ind = int(today.key)
         if day_ind > self.xd and day_ind < len(kl_pd)-2:
             if(today.close < kl_pd['close'].rolling(self.xd).mean()[day_ind]):
-                return self.make_sell_order(day_ind+1)
-            else:
-                return None
+                res.append(self.make_sell_order(day_ind+1))
+        return res
