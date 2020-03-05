@@ -43,7 +43,7 @@ class K_line():
         self.k_lines = df
 
     def load_temp_csv(self):
-        self.k_lines = pd.read_csv('./gen/temp.csv', index_col=0)
+        self.k_lines = pd.read_csv('./gen/'+ self.code +'.csv', index_col=0)
 
     def print_k_lines(self, ndays=None):
         # print some parameters of the instance

@@ -22,6 +22,8 @@ class struct_cls:
         self.price_max = price_max
         self.price_min = price_min
         self.price_line_lists = price_line_lists
+        self.struct_max = 0
+        self.struct_min = 0
     def __str__(self):
         out = 'name:{}, start:{}, end:{}, max:{}, min:{}'.format(self.name, self.id_start, self.id_end,\
                                                     self.price_max, self.price_min)
@@ -411,30 +413,43 @@ class Buy_yao(Qt_buy_base):
     def current_struct_analysis_line_base(self, today, lines):
         # 把line_simple 分析成不同的区间
         # lines 可以是self.line_simple, 可以是self.line_base
-        new_line_id = lines.shape[0] - 1
         current_line_id = self.line_simple_ref
-        cur_struct = struct_cls()
-        pre_struct = struct_cls()
+        new_line_id = lines.shape[0]
+        if new_line_id == 0 or new_line_id == 1:
+            cur_struct = struct_cls()
+            self.cur_struct = cur_struct
+            pre_struct = struct_cls()
+            self.pre_struct = pre_struct
+        else:
+            cur_struct = self.cur_struct
+            pre_struct = self.pre_struct
+        new_line_id = lines.shape[0] - 1
         
-        if new_line_id == 2 and pre_struct.id_end == 0 and cur_struct.id_end == 0:
+        if new_line_id == 3 and pre_struct.id_end == 0 and cur_struct.id_end == 0:
             # 构建初始的struct，用前3个顶点作为初始中枢
             cur_struct.id_start = lines.iloc[1].id
             cur_struct.id_end = lines.iloc[2].id
             if lines.iloc[0].vertex == TOP:
                 cur_struct.price_max = lines.iloc[2].price
                 cur_struct.price_min = lines.iloc[1].price
+                cur_struct.struct_max = cur_struct.price_max
+                cur_struct.struct_min = cur_struct.price_min
             else:
                 cur_struct.price_max = lines.iloc[1].price
                 cur_struct.price_min = lines.iloc[2].price
-            cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[1:3])
+                cur_struct.struct_max = cur_struct.price_max
+                cur_struct.struct_min = cur_struct.price_min
+            cur_struct.price_line_lists = lines.iloc[1:3]
 
             self.line_simple_ref = 2
         
-        print('line id: ', self.line_simple_ref, 'new id: ', new_line_id)
-        current_line_id = self.line_simple_ref
+        # print('line id: ', self.line_simple_ref, 'new id: ', new_line_id)
+        current_line_id = self.line_simple_ref + 1
+        # 最后一个line由于还没有定型，因此不能存入结构内
         while current_line_id < new_line_id:
             # 之后每增加一个顶点，进行比较，是否还留在中枢内1
-            current_line_id = self.line_simple_ref + 1
+            print('line id: ', self.line_simple_ref, 'new id: ', new_line_id)
+            # print(lines.iloc[current_line_id])
             if lines.iloc[current_line_id].vertex == TOP:
                 # 如果顶点在中枢内，则保存这个顶点
                 if lines.iloc[current_line_id].price <= cur_struct.price_max and \
@@ -454,13 +469,22 @@ class Buy_yao(Qt_buy_base):
                     cur_struct.id_end = lines.iloc[current_line_id].id
                     cur_struct.price_max = lines.iloc[current_line_id].price
                     cur_struct.price_min = lines.iloc[current_line_id-1].price
-                    cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[current_line_id-1:current_line_id+1])
+                    cur_struct.price_line_lists = lines.iloc[current_line_id-1:current_line_id+1]
+                    cur_struct.struct_max = cur_struct.price_max
+                    cur_struct.struct_min = cur_struct.price_min
                     self.line_simple_ref = current_line_id
                 
                 else:
-                    pass
+                    # 如果向上突破，要观察是否下一个底点返回中枢
+                    if new_line_id > current_line_id + 1:
+                        if lines.iloc[current_line_id + 1].price < cur_struct.price_max:
+                            # 返回到中枢内或者之下, 保存当前点，暂时不判断下一个点
+                            cur_struct.id_end =  lines.iloc[current_line_id].id
+                            cur_struct.struct_max = np.max([lines.iloc[current_line_id].price, cur_struct.struct_max])
+                            cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[current_line_id])
+                            self.line_simple_ref = current_line_id
 
-            if lines.iloc[current_line_id].vertex == BOT:
+            elif lines.iloc[current_line_id].vertex == BOT:
                 # 如果底点在中枢内，则保存这个顶点
                 if lines.iloc[current_line_id].price <= cur_struct.price_max and \
                     lines.iloc[current_line_id].price >= cur_struct.price_min:
@@ -469,7 +493,7 @@ class Buy_yao(Qt_buy_base):
                     cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[current_line_id])
                     self.line_simple_ref = current_line_id
 
-                elif lines.iloc[current_line_id].price < cur_struct.price_min:
+                elif lines.iloc[current_line_id].price > cur_struct.price_max:
                     # 作为底点，如果向上突破了，则保存前一个中枢结构体
                     pre_struct = cur_struct
                     self.struct_list.append(cur_struct)
@@ -479,14 +503,33 @@ class Buy_yao(Qt_buy_base):
                     cur_struct.id_end = lines.iloc[current_line_id].id
                     cur_struct.price_max = lines.iloc[current_line_id-1].price
                     cur_struct.price_min = lines.iloc[current_line_id].price
-                    cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[current_line_id-1:current_line_id+1])
+                    cur_struct.price_line_lists = lines.iloc[current_line_id-1:current_line_id+1]
+                    cur_struct.struct_max = cur_struct.price_max
+                    cur_struct.struct_min = cur_struct.price_min
                     self.line_simple_ref = current_line_id
                 
                 else:
-                    pass
+                    # 如果向下突破，要观察是否下一个底点返回中枢
+                    if new_line_id > current_line_id + 1:
+                        if lines.iloc[current_line_id + 1].price > cur_struct.price_min:
+                            # 返回到中枢内或者之下, 保存当前点，暂时不判断下一个点
+                            cur_struct.id_end =  lines.iloc[current_line_id].id
+                            cur_struct.struct_min = np.min([lines.iloc[current_line_id].price, cur_struct.struct_min])
+                            cur_struct.price_line_lists = cur_struct.price_line_lists.append(lines.iloc[current_line_id])
+                            self.line_simple_ref = current_line_id
                 
             current_line_id += 1
 
+        self.cur_struct = cur_struct
+        self.pre_struct = pre_struct
+
+        # 画出中枢框架
+        if(today.key == self.kl_pd.iloc[-1].key):
+            if len(self.struct_list) > 0:
+                for struct in self.struct_list:
+                    self.ax.add_patch(mp.Rectangle([struct.id_start, struct.struct_min], struct.id_end - struct.id_start,
+                                               struct.struct_max - struct.struct_min,
+                                               color='tab:gray', alpha=0.3))
 
 
 
@@ -496,9 +539,9 @@ class Buy_yao(Qt_buy_base):
         self._line_for_basic(today)
         self._line_simplify(today)
         self.current_struct_analysis_line_base(today, self.line_base)
-        self.line_simple.to_csv('line_simple.csv')
-        self.line_base.to_csv('line_base.csv')
-        self.struct_parts.to_csv('structs.csv')
+        # self.line_simple.to_csv('line_simple.csv')
+        # self.line_base.to_csv('line_base.csv')
+        # self.struct_parts.to_csv('structs.csv')
         return res
         
 
