@@ -165,8 +165,8 @@ class TimeWorker:
 
 if __name__ == "__main__":
 
-    stock = K_line('601519.SH', '20180102', '20201231',get_klines=False)
-    stock.load_temp_csv()
+    stock = K_line('002055.SZ', '20180102', '20201231',get_klines=True)
+    # stock.load_temp_csv()
     # stock.print_k_lines()
     
     stock.candle_plot()

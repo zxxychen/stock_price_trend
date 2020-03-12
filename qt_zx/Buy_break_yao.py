@@ -530,6 +530,11 @@ class Buy_yao(Qt_buy_base):
                     self.ax.add_patch(mp.Rectangle([struct.id_start, struct.struct_min], struct.id_end - struct.id_start,
                                                struct.struct_max - struct.struct_min,
                                                color='tab:gray', alpha=0.3))
+                struct = self.cur_struct
+                self.ax.add_patch(mp.Rectangle([struct.id_start, struct.struct_min], struct.id_end - struct.id_start,
+                                               struct.struct_max - struct.struct_min,
+                                               color='tab:gray', alpha=0.3))
+
 
 
 
