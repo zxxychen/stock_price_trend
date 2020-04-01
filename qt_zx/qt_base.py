@@ -7,6 +7,25 @@ import numpy as np
 import tushare as ts
 from matplotlib.pylab import date2num
 import datetime
+import os
+
+class K_line_list:
+    def __init__(self):
+        # 获取日线数据
+        # self.pro = ts.set_token('d5741f23ebd206c762d2e593573499d5a479b8955ae9b5152c646ba2')
+        self.pro = ts.pro_api()
+
+    def test_list():
+        tslist_path = './gen/tslist_sample.csv'
+        if os.path.exists(tslist_path):
+            tslist_sample = pd.read_csv(tslist_path)
+        else:
+            tslist = self.pro.stock_basic(exchange='', list_status='L', fields='ts_code, symbol, name, area, industry, list_date')
+            tslist_sample = tslist.sample(frac=0.05)
+            tslist_sample.to_csv('./gen/tslist_sample.csv')
+        print(tslist_sample.head())
+        return tslist_sample
+
 
 
 class K_line():
@@ -23,6 +42,8 @@ class K_line():
         self.end_time = end_time
         if get_klines:
             self._get_daily_lists()
+        else:
+            self.load_temp_csv()
         self.fig = plt.figure(figsize=(15, 7))
         gs = GridSpec(3, 3)
         self.ax1 = self.fig.add_subplot(gs[0:-1, :])
@@ -43,7 +64,12 @@ class K_line():
         self.k_lines = df
 
     def load_temp_csv(self):
-        self.k_lines = pd.read_csv('./gen/'+ self.code +'.csv', index_col=0)
+        file_path = './gen/'+ self.code +'.csv'
+        if os.path.exists(file_path):
+            self.k_lines = pd.read_csv('./gen/'+ self.code +'.csv', index_col=0)
+        else:
+            self._get_daily_lists()
+
 
     def print_k_lines(self, ndays=None):
         # print some parameters of the instance

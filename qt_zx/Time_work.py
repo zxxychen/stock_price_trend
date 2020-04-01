@@ -138,7 +138,7 @@ class TimeWorker:
         kl_pd.loc[:, 'benchmark'] = kl_pd.benchmark.cumsum() 
         kl_pd.loc[:, 'profit_trend'] = kl_pd.profit_trend.cumsum() 
         # print(kl_pd.loc[140:150, ['pct_chg', 'benchmark', 'signal']])
-        kl_pd.to_csv('./gen/profit.csv', columns=kl_pd.columns, index=True)
+        # kl_pd.to_csv('./gen/profit.csv', columns=kl_pd.columns, index=True)
         print('stock {} from date {} to {}'.format(kl_pd.loc[0, 'ts_code'], kl_pd.loc[0, 'trade_date'], kl_pd.iloc[-1]['trade_date']))
         print('benchmark is {}%'.format(np.around(kl_pd.iloc[-1].benchmark*100, decimals=2)))
         # print('final profit is {}%'.format(np.around(kl_pd.iloc[-1].profit_trend*100, decimals=2)))
@@ -151,6 +151,8 @@ class TimeWorker:
         if show:
             kl_pd[['profit_trend', 'benchmark']].plot(grid=True, figsize=(14,7))
             plt.show()
+        
+        return kl_pd.iloc[-1].profit_trend*100
     
     def _draw_buy_sell_date(self, ax):
         #画出买卖区间：
@@ -165,15 +167,15 @@ class TimeWorker:
 
 if __name__ == "__main__":
 
-    stock = K_line('002055.SZ', '20180102', '20201231',get_klines=True)
-    # stock.load_temp_csv()
+    stock = K_line('600992.SH', '20180102', '20201231',get_klines=False)
+    stock.load_temp_csv()
     # stock.print_k_lines()
     
     stock.candle_plot()
     stock.k_lines_mean_plot([20,5, 60])
     # stock.k_lines_BOLL_plot(20)
-    buy_factors =[{'xd1':3, 'xd2':20, 'xd3':60, 'class':Buy_yao, 'ax':stock.ax1}]
-    sell_factors=[{'xd1':5, 'xd2':20, 'xd3':60, 'class':Sell_mean, 'ratio':0}]
+    buy_factors =[{'xd1':3, 'xd2':20, 'xd3':60, 'class':Buy_safe, 'ax':stock.ax1}]
+    sell_factors=[{'xd1':5, 'xd2':20, 'xd3':60, 'class':Sell_safe, 'ratio':0}]
     factors = buy_factors + sell_factors
     print(factors)
     worker = TimeWorker(stock.k_lines[:], factors)
